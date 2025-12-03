@@ -1,36 +1,49 @@
 const { Pool } = require('pg');
-const dns = require('dns');
+const dns = require('dns').promises;
 require('dotenv').config();
 
-// --- FORCE IPV4 for Supabase/Render ---
-try {
-  if (dns.setDefaultResultOrder) {
-    dns.setDefaultResultOrder('ipv4first');
-    console.log("DNS order set to ipv4first in db.js");
+let pool = null;
+
+const getPool = async () => {
+  if (pool) return pool;
+
+  let hostToUse = process.env.DB_HOST;
+  
+  try {
+    console.log(`Resolviendo DNS para: ${hostToUse}...`);
+    const addresses = await dns.resolve4(hostToUse);
+    if (addresses && addresses.length > 0) {
+      hostToUse = addresses[0];
+      console.log(`DNS Resuelto: Usando IP ${hostToUse} para forzar IPv4`);
+    }
+  } catch (err) {
+    console.warn('Fallo al resolver DNS manual, intentando conexión directa:', err.message);
   }
-} catch (e) {
-  console.log("Could not set default result order for DNS", e);
-}
-// --------------------------------------
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+  pool = new Pool({
+    user: process.env.DB_USER,
+    host: hostToUse,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  });
 
-pool.on('connect', () => {
-  console.log('Connected to the PostgreSQL database');
-});
+  pool.on('connect', () => {
+    console.log('Connected to the PostgreSQL database');
+  });
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
+  });
+
+  return pool;
+};
 
 module.exports = {
-  query: (text, params) => pool.query(text, params),
+  query: async (text, params) => {
+    const p = await getPool();
+    return p.query(text, params);
+  },
 };
