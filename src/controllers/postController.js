@@ -70,3 +70,36 @@ exports.likePost = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 }
+
+// Get Trends (Top locations and professions)
+exports.getTrends = async (req, res) => {
+    try {
+        // Get top 5 locations
+        const locations = await db.query(`
+            SELECT location as name, COUNT(*) as count 
+            FROM posts 
+            WHERE status = 'approved'
+            GROUP BY location 
+            ORDER BY count DESC 
+            LIMIT 5
+        `);
+
+        // Get top 5 professions/careers
+        const professions = await db.query(`
+            SELECT profession as name, COUNT(*) as count 
+            FROM posts 
+            WHERE status = 'approved'
+            GROUP BY profession 
+            ORDER BY count DESC 
+            LIMIT 5
+        `);
+
+        res.json({
+            locations: locations.rows,
+            professions: professions.rows
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+}

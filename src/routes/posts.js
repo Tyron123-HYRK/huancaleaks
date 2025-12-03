@@ -8,6 +8,7 @@ const upload = multer({ storage: storage });
 
 // Public Routes
 router.get('/', postController.getAllPosts);
+router.get('/trends', postController.getTrends); // New Trends Route
 router.post('/', upload.single('image'), postController.createPost);
 router.post('/:id/like', postController.likePost);
 
