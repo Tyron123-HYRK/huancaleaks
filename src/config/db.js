@@ -1,6 +1,13 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// --- DIAGNÓSTICO DE VARIABLES DE ENTORNO ---
+console.log("--> Iniciando conexión a Base de Datos...");
+console.log("DB_HOST Detectado:", process.env.DB_HOST ? `'${process.env.DB_HOST}'` : "UNDEFINED (Usando localhost por defecto)");
+console.log("DB_USER Detectado:", process.env.DB_USER ? "SÍ" : "NO");
+console.log("DB_PORT Detectado:", process.env.DB_PORT || "UNDEFINED");
+// -------------------------------------------
+
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
