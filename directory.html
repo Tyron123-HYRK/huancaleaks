@@ -102,22 +102,27 @@
             }
 
             return (
-                <tr className="border-b border-gray-800 transition-colors text-sm">
+                <tr className="border-b border-gray-800 transition-colors text-sm hover:bg-white/5">
+                    <td className="p-4 font-bold text-white whitespace-nowrap">{post.targetName}</td>
+                    <td className="p-4 text-gray-300 whitespace-nowrap">{career}</td>
+                    <td className="p-4 text-brand-orange font-medium whitespace-nowrap">{uni || <span className="text-gray-600 text-xs italic">No especificado</span>}</td>
+                    <td className="p-4 text-gray-300 min-w-[200px]">
+                        <div className="line-clamp-2" title={post.description}>
+                            {post.description}
+                        </div>
+                    </td>
+                    <td className="p-4 text-gray-400 text-xs whitespace-nowrap hidden md:table-cell">{post.date}</td>
                     <td className="p-4">
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-700 bg-gray-800">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-700 bg-gray-800 cursor-pointer hover:scale-150 transition-transform origin-right" onClick={() => window.open(post.image, '_blank')}>
                             {post.image ? (
-                                <img src={post.image} alt="Avatar" className="w-full h-full object-cover" />
+                                <img src={post.image} alt="Evidencia" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-gray-500">
-                                    <i className="fas fa-user"></i>
+                                    <i className="fas fa-eye-slash"></i>
                                 </div>
                             )}
                         </div>
                     </td>
-                    <td className="p-4 font-bold text-white">{post.targetName}</td>
-                    <td className="p-4 text-gray-300">{career}</td>
-                    <td className="p-4 text-brand-orange font-medium">{uni || <span className="text-gray-600 text-xs italic">No especificado</span>}</td>
-                    <td className="p-4 text-gray-400 text-xs hidden md:table-cell">{post.date}</td>
                 </tr>
             );
         };
@@ -140,6 +145,7 @@
                         id: p.id,
                         targetName: p.target_name,
                         profession: p.profession,
+                        description: p.description,
                         date: new Date(p.date).toLocaleDateString(),
                         image: p.image_url ? (p.image_url.startsWith('http') ? p.image_url : p.image_url) : null
                     }));
@@ -155,7 +161,8 @@
                 return posts.filter(post => {
                     const search = searchTerm.toLowerCase();
                     return (post.targetName || "").toLowerCase().includes(search) ||
-                           (post.profession || "").toLowerCase().includes(search);
+                           (post.profession || "").toLowerCase().includes(search) ||
+                           (post.description || "").toLowerCase().includes(search);
                 });
             }, [posts, searchTerm]);
 
@@ -174,7 +181,7 @@
                                     <i className="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
                                     <input 
                                         type="text" 
-                                        placeholder="Buscar por nombre, carrera..." 
+                                        placeholder="Buscar por nombre, carrera, chisme..." 
                                         className="w-full bg-black/50 border border-gray-700 rounded-full py-2 pl-10 pr-4 text-sm text-white focus:border-brand-orange outline-none transition-all"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -186,17 +193,18 @@
                                 <table className="w-full text-left border-collapse custom-table">
                                     <thead>
                                         <tr className="bg-black/40 text-xs uppercase tracking-wider text-gray-500 font-bold border-b border-gray-800">
-                                            <th className="p-4">Evidencia</th>
                                             <th className="p-4">Nombre / Apodo</th>
                                             <th className="p-4">Carrera / Detalle</th>
                                             <th className="p-4">Institución</th>
+                                            <th className="p-4 w-1/3">El Chisme</th>
                                             <th className="p-4 hidden md:table-cell">Fecha</th>
+                                            <th className="p-4 text-right">Evidencia</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {loading ? (
                                             <tr>
-                                                <td colSpan="5" className="p-8 text-center text-gray-500 animate-pulse">
+                                                <td colSpan="6" className="p-8 text-center text-gray-500 animate-pulse">
                                                     Cargando directorio...
                                                 </td>
                                             </tr>
@@ -206,7 +214,7 @@
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="5" className="p-8 text-center text-gray-500">
+                                                <td colSpan="6" className="p-8 text-center text-gray-500">
                                                     No se encontraron resultados.
                                                 </td>
                                             </tr>

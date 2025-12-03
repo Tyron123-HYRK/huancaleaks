@@ -292,32 +292,90 @@
 
         const Modal = ({ isOpen, onClose, onSubmit }) => {
             const [preview, setPreview] = useState(null);
+            const [compressedFile, setCompressedFile] = useState(null);
             const [institution, setInstitution] = useState("");
             const [career, setCareer] = useState("");
             const [customCareer, setCustomCareer] = useState("");
             const [isCustom, setIsCustom] = useState(false);
+            const [isSubmitting, setIsSubmitting] = useState(false);
 
             useEffect(() => {
                 if (!isOpen) {
                     setPreview(null);
+                    setCompressedFile(null);
                     setInstitution("");
                     setCareer("");
                     setCustomCareer("");
                     setIsCustom(false);
+                    setIsSubmitting(false);
                 }
             }, [isOpen]);
 
             if (!isOpen) return null;
 
-            const handleFileChange = (e) => {
+            const compressImage = (file) => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 800;
+                            const MAX_HEIGHT = 800;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            canvas.toBlob((blob) => {
+                                const newFile = new File([blob], file.name, {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                });
+                                resolve(newFile);
+                            }, 'image/jpeg', 0.7);
+                        };
+                    };
+                });
+            };
+
+            const handleFileChange = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     setPreview(URL.createObjectURL(file));
+                    // Show preview immediately, compress in background
+                    try {
+                        const compressed = await compressImage(file);
+                        setCompressedFile(compressed);
+                    } catch (err) {
+                        console.error("Compression failed", err);
+                        setCompressedFile(file); // Fallback to original
+                    }
                 }
             };
 
-            const handleSubmit = (e) => {
+            const handleSubmit = async (e) => {
                 e.preventDefault();
+                if (isSubmitting) return;
+                setIsSubmitting(true);
+
                 const formData = new FormData(e.target);
                 
                 // Logic for "Profession" field combination
@@ -331,7 +389,13 @@
                 // Override the form data for profession
                 formData.set('profession', finalProfession);
 
-                onSubmit(formData);
+                // Use compressed file if available
+                if (compressedFile) {
+                    formData.set('image', compressedFile);
+                }
+
+                await onSubmit(formData);
+                setIsSubmitting(false);
             };
 
             return (
@@ -350,7 +414,7 @@
                             {/* Datos Personales */}
                             <div>
                                 <label className="block text-xs font-bold text-brand-orange uppercase mb-1 ml-1">¿Quién es?</label>
-                                <input name="targetName" type="text" placeholder="Nombre completo o Apodo conocido" className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-brand-orange outline-none transition-all" />
+                                <input name="targetName" type="text" placeholder="Nombre completo o Apodo conocido" className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-brand-orange outline-none transition-all" required />
                             </div>
                             
                             {/* Selectores Inteligentes */}
@@ -427,8 +491,18 @@
                                 Tu IP es anónima. Al publicar aceptas que esto es humor/sátira.
                             </div>
 
-                            <button type="submit" className="w-full bg-brand-orange text-black font-extrabold py-4 rounded-lg hover:bg-orange-500 hover:scale-[1.02] transition-all shadow-lg shadow-orange-500/20">
-                                PUBLICAR AHORA
+                            <button 
+                                type="submit" 
+                                disabled={isSubmitting}
+                                className={`w-full font-extrabold py-4 rounded-lg transition-all shadow-lg ${isSubmitting ? 'bg-gray-600 text-gray-300 cursor-not-allowed' : 'bg-brand-orange text-black hover:bg-orange-500 hover:scale-[1.02] shadow-orange-500/20'}`}
+                            >
+                                {isSubmitting ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <i className="fas fa-circle-notch fa-spin"></i> PUBLICANDO...
+                                    </span>
+                                ) : (
+                                    "PUBLICAR AHORA"
+                                )}
                             </button>
                         </form>
                     </div>
