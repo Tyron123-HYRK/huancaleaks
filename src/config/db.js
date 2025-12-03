@@ -10,14 +10,16 @@ const getPool = async () => {
   let hostToUse = process.env.DB_HOST;
   
   try {
-    console.log(`Resolviendo DNS para: ${hostToUse}...`);
-    const addresses = await dns.resolve4(hostToUse);
-    if (addresses && addresses.length > 0) {
-      hostToUse = addresses[0];
-      console.log(`DNS Resuelto: Usando IP ${hostToUse} para forzar IPv4`);
+    console.log(`Buscando IP v4 para: ${hostToUse}...`);
+    // Usamos dns.lookup con family: 4, que es más robusto que resolve4 en algunos entornos
+    const { address } = await dns.lookup(hostToUse, { family: 4 });
+    
+    if (address) {
+      console.log(`DNS Resuelto: Host ${hostToUse} -> IP ${address}`);
+      hostToUse = address;
     }
   } catch (err) {
-    console.warn('Fallo al resolver DNS manual, intentando conexión directa:', err.message);
+    console.warn('Fallo al buscar IP v4, intentando conexión con host original:', err.message);
   }
 
   pool = new Pool({
