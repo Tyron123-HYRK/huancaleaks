@@ -1,12 +1,17 @@
 const { Pool } = require('pg');
+const dns = require('dns');
 require('dotenv').config();
 
-// --- DIAGNÓSTICO DE VARIABLES DE ENTORNO ---
-console.log("--> Iniciando conexión a Base de Datos...");
-console.log("DB_HOST Detectado:", process.env.DB_HOST ? `'${process.env.DB_HOST}'` : "UNDEFINED (Usando localhost por defecto)");
-console.log("DB_USER Detectado:", process.env.DB_USER ? "SÍ" : "NO");
-console.log("DB_PORT Detectado:", process.env.DB_PORT || "UNDEFINED");
-// -------------------------------------------
+// --- FORCE IPV4 for Supabase/Render ---
+try {
+  if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+    console.log("DNS order set to ipv4first in db.js");
+  }
+} catch (e) {
+  console.log("Could not set default result order for DNS", e);
+}
+// --------------------------------------
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -18,6 +23,9 @@ const pool = new Pool({
 });
 
 pool.on('connect', () => {
+  console.log('Connected to the PostgreSQL database');
+});
+
   console.log('Connected to the PostgreSQL database');
 });
 
