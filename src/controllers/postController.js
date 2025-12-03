@@ -61,6 +61,9 @@ exports.deletePost = async (req, res) => {
 }
 
 exports.likePost = async (req, res) => {
+    // Feature disabled for resource optimization
+    res.status(200).json({ message: "Feature disabled" });
+    /*
     try {
         const { id } = req.params;
         const result = await db.query("UPDATE posts SET likes = likes + 1 WHERE id = $1 RETURNING likes", [id]);
@@ -69,6 +72,7 @@ exports.likePost = async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
+    */
 }
 
 // Get Trends (Top locations and professions)

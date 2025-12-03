@@ -10,7 +10,7 @@ const upload = multer({ storage: storage });
 router.get('/', postController.getAllPosts);
 router.get('/trends', postController.getTrends); // New Trends Route
 router.post('/', upload.single('image'), postController.createPost);
-router.post('/:id/like', postController.likePost);
+// router.post('/:id/like', postController.likePost); // Disabled for optimization
 
 // Admin Routes (Protected would be better, but for now simple)
 // In a real app, we'd add auth middleware here.
