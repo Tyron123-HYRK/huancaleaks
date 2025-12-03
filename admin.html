@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HuancaLeaks - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #0f0f0f; color: #e5e5e5; font-family: 'Montserrat', sans-serif; }
+        .glass-panel { background: rgba(26, 26, 26, 0.95); border: 1px solid rgba(255, 123, 0, 0.1); }
+    </style>
+</head>
+<body class="p-8">
+
+    <div id="login-screen" class="max-w-md mx-auto mt-20 glass-panel p-8 rounded-xl">
+        <h1 class="text-2xl font-bold text-center mb-6">Admin Login</h1>
+        <form id="login-form" class="space-y-4">
+            <input type="text" id="username" placeholder="Usuario" class="w-full p-3 rounded bg-gray-800 border border-gray-700 text-white" required>
+            <input type="password" id="password" placeholder="Contraseña" class="w-full p-3 rounded bg-gray-800 border border-gray-700 text-white" required>
+            <button type="submit" class="w-full bg-orange-600 p-3 rounded text-white font-bold hover:bg-orange-700">INGRESAR</button>
+        </form>
+        <p id="login-error" class="text-red-500 text-center mt-4 hidden"></p>
+    </div>
+
+    <div id="admin-dashboard" class="hidden container mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-orange-500">Panel de Control HuancaLeaks</h1>
+            <button id="logout-btn" class="bg-gray-700 px-4 py-2 rounded text-white">Cerrar Sesión</button>
+        </div>
+
+        <div class="glass-panel rounded-xl overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-gray-800 text-gray-400">
+                    <tr>
+                        <th class="p-4">ID</th>
+                        <th class="p-4">Target</th>
+                        <th class="p-4">Descripción</th>
+                        <th class="p-4">Fecha</th>
+                        <th class="p-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="posts-table-body" class="divide-y divide-gray-800">
+                    <!-- Posts injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let token = localStorage.getItem('adminToken');
+
+        // Elements
+        const loginScreen = document.getElementById('login-screen');
+        const dashboard = document.getElementById('admin-dashboard');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const tableBody = document.getElementById('posts-table-body');
+
+        function showDashboard() {
+            loginScreen.classList.add('hidden');
+            dashboard.classList.remove('hidden');
+            loadPosts();
+        }
+
+        function showLogin() {
+            loginScreen.classList.remove('hidden');
+            dashboard.classList.add('hidden');
+            localStorage.removeItem('adminToken');
+        }
+
+        // Login Logic
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.token;
+                    localStorage.setItem('adminToken', token);
+                    showDashboard();
+                } else {
+                    loginError.textContent = data.error;
+                    loginError.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+                loginError.textContent = "Error de conexión";
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', showLogin);
+
+        // Load Posts
+        async function loadPosts() {
+            try {
+                const res = await fetch(`${API_URL}/posts/admin/all`, {
+                    headers: { 'Authorization': token }
+                });
+                
+                if (!res.ok) {
+                    if (res.status === 401) showLogin();
+                    return;
+                }
+
+                const posts = await res.json();
+                renderPosts(posts);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderPosts(posts) {
+            tableBody.innerHTML = posts.map(post => `
+                <tr class="hover:bg-gray-800/50">
+                    <td class="p-4 text-gray-500">#${post.id}</td>
+                    <td class="p-4 font-bold text-white">
+                        ${post.target_name || 'N/A'}
+                        <div class="text-xs text-orange-400">${post.profession}</div>
+                    </td>
+                    <td class="p-4 text-gray-300 text-sm max-w-md truncate">${post.description}</td>
+                    <td class="p-4 text-gray-500 text-xs">${new Date(post.date).toLocaleDateString()}</td>
+                    <td class="p-4">
+                        <button onclick="deletePost(${post.id})" class="text-red-500 hover:text-red-400 hover:bg-red-900/20 p-2 rounded">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Delete Post
+        window.deletePost = async (id) => {
+            if(!confirm('¿Estás seguro de eliminar este reporte?')) return;
+
+            try {
+                const res = await fetch(`${API_URL}/posts/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': token }
+                });
+                
+                if (res.ok) {
+                    loadPosts(); // Refresh
+                } else {
+                    alert('Error al eliminar');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        // Init
+        if (token) {
+            showDashboard();
+        }
+    </script>
+</body>
+</html>
